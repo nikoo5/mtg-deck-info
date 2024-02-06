@@ -23,7 +23,6 @@ const MTGCard = ({ name, image, textEnglish, textSpanish }) => {
         <Box
           sx={{
             flexGrow: 1,
-            bgcolor: "background.paper",
             display: "flex",
           }}
         >

@@ -25,13 +25,12 @@ const fetchArchidektDeck = async (url) => {
 const fetchScryfallCard = async (name, code, number, lang = "es") => {
   const url = `https://api.scryfall.com/cards/${code}/${number}/${lang}`;
 
-  try {
-    const res = await axios.get(url);
-    if (res.status === 200) {
-      const deck = res.data;
-      return deck;
-    }
-  } catch (err) {}
+  const res = await axios.get(url);
+  if (res.status === 200) {
+    const deck = res.data;
+    return deck;
+  }
+  return null;
 };
 
 export { fetchArchidektDeck, fetchScryfallCard };

@@ -1,9 +1,17 @@
-import { Button, Container, LinearProgress, TextField } from "@mui/material";
-import "./styles.css";
+import {
+  Box,
+  Button,
+  LinearProgress,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { fetchArchidektDeck, fetchScryfallCard } from "../../utils/archidekt";
 
-const LoadDeck = () => {
+import Searchicon from "@mui/icons-material/Search";
+
+const LoadDeck = ({ onLoadCards = (deck) => {} }) => {
+  const [loadingStatus, setLoadingStatus] = useState("");
   const [progress, setProgress] = useState(0);
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -15,41 +23,70 @@ const LoadDeck = () => {
   };
 
   const fetchDeck = () => {
-    console.log("Fetching deck");
+    setLoadingStatus("Fetching deck from Archidekt...");
     fetchArchidektDeck(url)
       .then((d) => {
-        console.log("Deck fetched");
-        setDeck(d);
+        if (d !== null) {
+          setDeck(d);
+        } else {
+          setIsLoading(false);
+        }
       })
       .catch(() => {
-        console.log("Error fetching deck");
         setIsLoading(false);
       });
   };
 
   const fetchCard = (index) => {
     if (index === deck.cards.length) {
-      console.log("All cards fetched");
+      setLoadingStatus("All cards fetched");
+      onLoadCards(cards);
       setIsLoading(false);
       setProgress(0);
+      setUrl("");
+      setCards([]);
       return;
     } else {
       setProgress(index + 1);
     }
 
-    console.log("Fetching Card");
     const archidekt_card = deck.cards[index];
+    setLoadingStatus(
+      `[${String(index + 1).padStart(3, "0")}/${String(
+        deck.cards.length
+      ).padStart(3, "0")}] Fetching "${
+        archidekt_card.card.oracleCard.name
+      }" card from Scryfall...`
+    );
 
     fetchScryfallCard(
       archidekt_card.card.oracleCard.name,
       archidekt_card.card.edition.editioncode,
       archidekt_card.card.collectorNumber,
       "es"
-    ).then((c) => {
-      console.log("Card fetched");
-      setCards(cards.push(c));
-      fetchCard(index + 1, deck.cards.length);
-    });
+    )
+      .then((c) => {
+        setCards(cards.push(c));
+        fetchCard(index + 1, deck.cards.length);
+      })
+      .catch((e) => {
+        fetchScryfallCard(
+          archidekt_card.card.oracleCard.name,
+          archidekt_card.card.edition.editioncode,
+          archidekt_card.card.collectorNumber,
+          "en"
+        )
+          .then((c) => {
+            setCards(cards.push(c));
+            fetchCard(index + 1, deck.cards.length);
+          })
+          .catch((e) => {
+            setCards([]);
+            setDeck(null);
+            setIsLoading(false);
+            setProgress(0);
+          });
+      });
   };
 
   const handleSearch = () => {
@@ -62,22 +99,52 @@ const LoadDeck = () => {
   }, [deck]);
 
   return (
-    <Container maxWidth="xl">
-      <TextField
-        label="Archidekt Deck URL"
-        variant="outlined"
-        onChange={handleUrlChange}
-      />
-      <Button variant="contained" disabled={isLoading} onClick={handleSearch}>
-        Search
-      </Button>
-      {isLoading && deck !== null ? (
-        <LinearProgress
-          variant="determinate"
-          value={(+progress / +deck.cards.length) * 100}
+    <>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <TextField
+          label="Archidekt Deck URL"
+          variant="outlined"
+          onChange={handleUrlChange}
+          value={url}
+          sx={{ width: "100%", maxWidth: "600px", marginRight: "2vw" }}
         />
-      ) : null}
-    </Container>
+        <Button
+          variant="contained"
+          disabled={isLoading}
+          endIcon={<Searchicon />}
+          onClick={handleSearch}
+        >
+          Find Deck
+        </Button>
+      </Box>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        {isLoading && deck !== null ? (
+          <>
+            <Typography sx={{ marginTop: "20px" }}>{loadingStatus}</Typography>
+            <LinearProgress
+              variant="buffer"
+              value={(+progress / +deck.cards.length) * 100}
+              valueBuffer={(+progress / +deck.cards.length) * 100 + 2}
+              sx={{ width: "100%", maxWidth: "700px" }}
+            />
+          </>
+        ) : null}
+      </Box>
+    </>
   );
 };
 
